@@ -103,6 +103,14 @@ export const ReloadIcon = ({ className = 'w-6 h-6' }: { className?: string }) =>
     </svg>
 );
 
+export const StudentIntakeIcon = ({ className = 'w-8 h-8' }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M18 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 10h6M9 14h6" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="12" cy="7" r="1.5" fill="currentColor"/>
+    </svg>
+);
+
 export const WindowControls = ({ onMinimize, onMaximize, onRestore, onClose, isMaximized }: any) => (
     <div className="flex items-center">
         <button

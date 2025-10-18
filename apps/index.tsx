@@ -46,136 +46,188 @@ export const BrowserApp = () => {
 };
 
 export const MaxfraAiBrowserApp = () => {
-    const [inputValue, setInputValue] = useState('');
-    const [view, setView] = useState<{ type: 'homepage' | 'website' | 'ai_response' }>({ type: 'homepage' });
-    const [url, setUrl] = useState('');
-    const [aiResponse, setAiResponse] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [inputValue, setInputValue] = useState('https://www.google.com');
+    const [history, setHistory] = useState<string[]>(['https://www.google.com']);
+    const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [currentUrl, setCurrentUrl] = useState('https://www.google.com');
+    const [error, setError] = useState<string | null>(null);
 
-    const isLikelyUrl = (text: string): boolean => {
-        const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
-        return urlPattern.test(text);
+    const isValidUrl = (urlString: string): boolean => {
+        try {
+            new URL(urlString);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleSearchOrNavigate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const query = inputValue.trim();
-        if (!query) return;
+    const formatUrl = (input: string): string => {
+        if (!input) return '';
+        if (isValidUrl(input)) return input;
+        if (input.startsWith('http://') || input.startsWith('https://')) return input;
+        if (input.includes('.') && !input.includes(' ')) return `https://${input}`;
+        return `https://www.google.com/search?q=${encodeURIComponent(input)}`;
+    };
 
-        if (isLikelyUrl(query)) {
-            let properUrl = query;
-            if (!/^https?:\/\//i.test(properUrl)) {
-                properUrl = `https://${properUrl}`;
+    const navigate = (url: string) => {
+        try {
+            setError(null);
+            const formattedUrl = formatUrl(url);
+            setCurrentUrl(formattedUrl);
+            setInputValue(url);
+            
+            if (currentHistoryIndex < history.length - 1) {
+                // If we're not at the end of the history, remove forward history
+                setHistory(prev => [...prev.slice(0, currentHistoryIndex + 1), formattedUrl]);
+            } else {
+                setHistory(prev => [...prev, formattedUrl]);
             }
-            setUrl(properUrl);
-            setView({ type: 'website' });
-        } else {
-            setView({ type: 'ai_response' });
+            setCurrentHistoryIndex(prev => prev + 1);
             setIsLoading(true);
-            setAiResponse('');
-            try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: query,
-                });
-                setAiResponse(response.text);
-            } catch (error) {
-                console.error("Gemini API Error:", error);
-                setAiResponse('An error occurred while fetching the AI response. Please check your connection or API key setup.');
-            } finally {
-                setIsLoading(false);
-            }
+        } catch (err) {
+            setError('Invalid URL or navigation failed');
+            console.error('Navigation error:', err);
         }
-    };
-    
-    const goBack = () => iframeRef.current?.contentWindow?.history.back();
-    const goForward = () => iframeRef.current?.contentWindow?.history.forward();
-    const reload = () => {
-        if (view.type === 'website' && iframeRef.current) {
-            // A more reliable way to reload an iframe
-            iframeRef.current.src = iframeRef.current.src;
-        } else if (view.type === 'ai_response' && inputValue) {
-            handleSearchOrNavigate(new Event('submit', { cancelable: true }) as any);
-        }
-    };
-    const goHome = () => {
-        setView({ type: 'homepage' });
-        setInputValue('');
-        setUrl('');
     };
 
-    const renderContent = () => {
-        switch (view.type) {
-            case 'website':
-                return (
-                    <iframe
-                        ref={iframeRef}
-                        src={url}
-                        title="Web Content"
-                        className="w-full h-full border-none"
-                        sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts"
-                        onError={() => alert(`Could not load website: ${url}. The site may not allow being embedded.`)}
-                    />
-                );
-            case 'ai_response':
-                return (
-                    <div className="p-6 overflow-y-auto text-gray-800 whitespace-pre-wrap">
-                        {isLoading ? (
-                            <div className="flex items-center gap-2">
-                                <svg className="animate-spin h-5 w-5 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Thinking...
-                            </div>
-                        ) : (
-                            <p>{aiResponse}</p>
-                        )}
-                    </div>
-                );
-            case 'homepage':
-            default:
-                return (
-                     <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 p-4">
-                        <MaxfraAIBrowserIcon className="w-24 h-24 mb-4" />
-                        <h1 className="text-3xl font-bold text-gray-800 text-center">MAXFRA AI Browser</h1>
-                        <p className="text-gray-500 mb-6 text-center">Enter a URL or search with Gemini AI</p>
-                        <form onSubmit={handleSearchOrNavigate} className="w-full max-w-lg">
-                            <input
-                                type="text"
-                                value={inputValue}
-                                onChange={e => setInputValue(e.target.value)}
-                                placeholder="Search or type a URL"
-                                className="w-full p-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                autoFocus
-                            />
-                        </form>
-                    </div>
-                );
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        navigate(inputValue);
+    };
+
+    const goBack = () => {
+        if (currentHistoryIndex > 0) {
+            setCurrentHistoryIndex(prev => prev - 1);
+            const previousUrl = history[currentHistoryIndex - 1];
+            setCurrentUrl(previousUrl);
+            setInputValue(previousUrl);
         }
     };
+
+    const goForward = () => {
+        if (currentHistoryIndex < history.length - 1) {
+            setCurrentHistoryIndex(prev => prev + 1);
+            const nextUrl = history[currentHistoryIndex + 1];
+            setCurrentUrl(nextUrl);
+            setInputValue(nextUrl);
+        }
+    };
+
+    const reload = () => {
+        if (iframeRef.current) {
+            setIsLoading(true);
+            iframeRef.current.src = currentUrl;
+        }
+    };
+
+    const goHome = () => {
+        navigate('https://www.google.com');
+    };
+
+    useEffect(() => {
+        const handleLoad = () => {
+            setIsLoading(false);
+            if (iframeRef.current?.contentWindow?.location.href) {
+                try {
+                    const actualUrl = iframeRef.current.contentWindow.location.href;
+                    setInputValue(actualUrl);
+                    setCurrentUrl(actualUrl);
+                    setError(null);
+                } catch (err) {
+                    console.error('Error accessing iframe location:', err);
+                    // Don't set error here as some sites legitimately block access to their location
+                }
+            }
+        };
+
+        const handleError = () => {
+            setIsLoading(false);
+            setError('Failed to load the webpage. The site might be unavailable or blocked.');
+        };
+
+        const iframe = iframeRef.current;
+        if (iframe) {
+            iframe.addEventListener('load', handleLoad);
+            iframe.addEventListener('error', handleError);
+        }
+
+        return () => {
+            if (iframe) {
+                iframe.removeEventListener('load', handleLoad);
+                iframe.removeEventListener('error', handleError);
+            }
+        };
+    }, []);
 
     return (
         <div className="w-full h-full flex flex-col bg-white">
-            <div className="flex items-center p-2 bg-gray-200 border-b gap-2 text-black">
-                <button onClick={goBack} className="p-2 rounded-full hover:bg-gray-300"><ArrowLeft className="w-5 h-5" /></button>
-                <button onClick={goForward} className="p-2 rounded-full hover:bg-gray-300"><ArrowRight className="w-5 h-5" /></button>
-                <button onClick={reload} className="p-2 rounded-full hover:bg-gray-300"><ReloadIcon className="w-5 h-5" /></button>
-                <button onClick={goHome} className="p-2 rounded-full hover:bg-gray-300"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg></button>
-                <form onSubmit={handleSearchOrNavigate} className="flex-grow">
+            <div className="flex items-center p-2 bg-gray-100 border-b gap-2">
+                <button 
+                    onClick={goBack} 
+                    disabled={currentHistoryIndex <= 0}
+                    className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+                <button 
+                    onClick={goForward}
+                    disabled={currentHistoryIndex >= history.length - 1}
+                    className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <ArrowRight className="w-5 h-5" />
+                </button>
+                <button onClick={reload} className="p-2 rounded-full hover:bg-gray-200">
+                    <ReloadIcon className="w-5 h-5" />
+                </button>
+                <button onClick={goHome} className="p-2 rounded-full hover:bg-gray-200">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                    </svg>
+                </button>
+                <form onSubmit={handleSubmit} className="flex-grow">
                     <input
                         type="text"
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
-                        placeholder="Search or type a URL"
-                        className="w-full p-2 rounded-full bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        placeholder="Search Google or enter a URL"
+                        className="w-full p-2 rounded bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                 </form>
             </div>
-            <div className="flex-grow bg-gray-100 overflow-hidden">
-                {renderContent()}
+            <div className="flex-grow bg-white relative overflow-hidden">
+                {isLoading && (
+                    <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    </div>
+                )}
+                {error ? (
+                    <div className="flex items-center justify-center h-full bg-gray-50">
+                        <div className="text-center p-8">
+                            <div className="text-red-500 text-xl mb-4">⚠️ {error}</div>
+                            <button 
+                                onClick={() => {
+                                    setError(null);
+                                    navigate('https://www.google.com');
+                                }}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                                Return to Google
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <iframe
+                        ref={iframeRef}
+                        src={currentUrl}
+                        className="w-full h-full border-none"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads allow-modals allow-presentation allow-top-navigation"
+                        allow="fullscreen; clipboard-read; clipboard-write"
+                        title="Browser Content"
+                        onError={() => setError('Failed to load the webpage. The site might be unavailable or blocked.')}
+                    />
+                )}
             </div>
         </div>
     );

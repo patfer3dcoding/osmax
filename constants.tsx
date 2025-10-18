@@ -1,6 +1,6 @@
 import type { AppConfig } from './types';
 import * as Icons from './components/icons';
-import { NotepadApp, BrowserApp, FileExplorerApp, SettingsApp, CalculatorApp, MaxfraAiBrowserApp, CalendarApp } from './apps';
+import { NotepadApp, BrowserApp, FileExplorerApp, SettingsApp, CalculatorApp, MaxfraAiBrowserApp, CalendarApp, StudentIntakeApp } from './apps';
 
 export const APPS: AppConfig[] = [
   {

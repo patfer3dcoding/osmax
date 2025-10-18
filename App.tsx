@@ -1,4 +1,11 @@
 
+// Declare AudioContext type for older browsers
+declare global {
+  interface Window {
+    webkitAudioContext: typeof AudioContext;
+  }
+}
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Desktop from './components/Desktop';
 import Taskbar from './components/Taskbar';
@@ -118,6 +125,13 @@ const App: React.FC = () => {
   const zIndexCounter = useRef(10);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const prevWindowsRef = useRef<WindowState[]>([]);
+  
+  // Declare AudioContext type for older browsers
+  declare global {
+    interface Window {
+      webkitAudioContext: typeof AudioContext;
+    }
+  }
 
   useEffect(() => {
     try {
