@@ -111,6 +111,37 @@ export const StudentIntakeIcon = ({ className = 'w-8 h-8' }: { className?: strin
     </svg>
 );
 
+export const WordProcessorIcon = ({ className = 'w-8 h-8' }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="3" width="16" height="18" rx="2" fill="#2B579A" />
+        <path d="M7 7h10M7 11h10M7 15h7" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+);
+
+export const SpreadsheetIcon = ({ className = 'w-8 h-8' }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="18" height="18" rx="2" fill="#217346" />
+        <path d="M3 9h18M3 15h18M9 3v18M15 3v18" stroke="white" strokeWidth="1.5" />
+    </svg>
+);
+
+export const PresentationIcon = ({ className = 'w-8 h-8' }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="4" width="18" height="13" rx="2" fill="#D24726" />
+        <rect x="6" y="7" width="5" height="3" fill="white" opacity="0.8" />
+        <rect x="6" y="11" width="12" height="1" fill="white" opacity="0.6" />
+        <rect x="6" y="13" width="9" height="1" fill="white" opacity="0.6" />
+        <path d="M12 17v3M9 20h6" stroke="#D24726" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+);
+
+export const EmailIcon = ({ className = 'w-8 h-8' }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="5" width="18" height="14" rx="2" fill="#0078D4" />
+        <path d="M3 7l9 6 9-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
 export const WindowControls = ({ onMinimize, onMaximize, onRestore, onClose, isMaximized }: any) => (
     <div className="flex items-center">
         <button

@@ -1078,3 +1078,558 @@ export const CalendarApp = () => {
         </div>
     );
 };
+
+// --- Office Suite Apps ---
+
+// Word Processor App
+export const WordProcessorApp = () => {
+    const [content, setContent] = useState('');
+    const [fontSize, setFontSize] = useState('16');
+    const [isBold, setIsBold] = useState(false);
+    const [isItalic, setIsItalic] = useState(false);
+    const [isUnderline, setIsUnderline] = useState(false);
+    const [textAlign, setTextAlign] = useState('left');
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('maxfra-word-doc');
+            if (saved) setContent(saved);
+        } catch (error) {
+            console.error("Failed to load document", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('maxfra-word-doc', content);
+        } catch (error) {
+            console.error("Failed to save document", error);
+        }
+    }, [content]);
+
+    const handleFormat = (format: string) => {
+        if (format === 'bold') setIsBold(!isBold);
+        else if (format === 'italic') setIsItalic(!isItalic);
+        else if (format === 'underline') setIsUnderline(!isUnderline);
+    };
+
+    const getTextStyle = () => {
+        return {
+            fontWeight: isBold ? 'bold' : 'normal',
+            fontStyle: isItalic ? 'italic' : 'normal',
+            textDecoration: isUnderline ? 'underline' : 'none',
+            fontSize: `${fontSize}px`,
+            textAlign: textAlign as any,
+        };
+    };
+
+    return (
+        <div className="w-full h-full flex flex-col bg-white">
+            <div className="flex items-center gap-2 p-2 bg-gray-100 border-b">
+                <button onClick={() => handleFormat('bold')} className={`px-3 py-1 rounded ${isBold ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Bold">
+                    <strong>B</strong>
+                </button>
+                <button onClick={() => handleFormat('italic')} className={`px-3 py-1 rounded ${isItalic ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Italic">
+                    <em>I</em>
+                </button>
+                <button onClick={() => handleFormat('underline')} className={`px-3 py-1 rounded ${isUnderline ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Underline">
+                    <u>U</u>
+                </button>
+                <div className="w-px h-6 bg-gray-300"></div>
+                <select value={fontSize} onChange={e => setFontSize(e.target.value)} className="px-2 py-1 border rounded bg-white">
+                    <option value="12">12</option>
+                    <option value="14">14</option>
+                    <option value="16">16</option>
+                    <option value="18">18</option>
+                    <option value="20">20</option>
+                    <option value="24">24</option>
+                    <option value="32">32</option>
+                </select>
+                <div className="w-px h-6 bg-gray-300"></div>
+                <button onClick={() => setTextAlign('left')} className={`px-3 py-1 rounded ${textAlign === 'left' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Align Left">
+                    ≡
+                </button>
+                <button onClick={() => setTextAlign('center')} className={`px-3 py-1 rounded ${textAlign === 'center' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Align Center">
+                    ≣
+                </button>
+                <button onClick={() => setTextAlign('right')} className={`px-3 py-1 rounded ${textAlign === 'right' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Align Right">
+                    ≡
+                </button>
+                <button onClick={() => setContent('')} className="ml-auto px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600" title="Clear">
+                    Clear
+                </button>
+            </div>
+            <textarea
+                className="flex-grow p-4 border-none resize-none focus:outline-none text-black"
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                style={getTextStyle()}
+                placeholder="Start typing your document..."
+            />
+        </div>
+    );
+};
+
+// Spreadsheet App
+interface Cell {
+    value: string;
+    computed?: string;
+}
+
+export const SpreadsheetApp = () => {
+    const [cells, setCells] = useState<{ [key: string]: Cell }>({});
+    const [selectedCell, setSelectedCell] = useState<string | null>(null);
+    const [inputValue, setInputValue] = useState('');
+
+    const rows = 20;
+    const cols = 10;
+    const colLabels = 'ABCDEFGHIJ'.split('');
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('maxfra-spreadsheet');
+            if (saved) setCells(JSON.parse(saved));
+        } catch (error) {
+            console.error("Failed to load spreadsheet", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('maxfra-spreadsheet', JSON.stringify(cells));
+        } catch (error) {
+            console.error("Failed to save spreadsheet", error);
+        }
+    }, [cells]);
+
+    const getCellId = (row: number, col: number) => `${colLabels[col]}${row + 1}`;
+
+    const evaluateFormula = (formula: string): string => {
+        try {
+            if (!formula.startsWith('=')) return formula;
+            const expr = formula.substring(1).replace(/([A-J]\d+)/g, (match) => {
+                const cellValue = cells[match]?.computed || cells[match]?.value || '0';
+                return cellValue || '0';
+            });
+            // eslint-disable-next-line no-eval
+            const result = eval(expr);
+            return String(result);
+        } catch {
+            return '#ERROR';
+        }
+    };
+
+    const handleCellClick = (row: number, col: number) => {
+        const cellId = getCellId(row, col);
+        setSelectedCell(cellId);
+        setInputValue(cells[cellId]?.value || '');
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInputValue(e.target.value);
+    };
+
+    const handleInputKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && selectedCell) {
+            const newCells = { ...cells };
+            newCells[selectedCell] = {
+                value: inputValue,
+                computed: evaluateFormula(inputValue)
+            };
+            setCells(newCells);
+            setSelectedCell(null);
+            setInputValue('');
+        } else if (e.key === 'Escape') {
+            setSelectedCell(null);
+            setInputValue('');
+        }
+    };
+
+    const getCellDisplay = (row: number, col: number): string => {
+        const cellId = getCellId(row, col);
+        const cell = cells[cellId];
+        if (!cell) return '';
+        return cell.computed !== undefined ? cell.computed : cell.value;
+    };
+
+    return (
+        <div className="w-full h-full flex flex-col bg-white text-black">
+            <div className="flex items-center gap-2 p-2 bg-gray-100 border-b">
+                <span className="font-semibold">{selectedCell || 'Select a cell'}</span>
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="Enter value or formula (=A1+B1)"
+                    className="flex-grow px-3 py-1 border rounded bg-white"
+                    disabled={!selectedCell}
+                />
+                <button onClick={() => setCells({})} className="px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600">Clear All</button>
+            </div>
+            <div className="flex-grow overflow-auto">
+                <table className="border-collapse w-full">
+                    <thead>
+                        <tr>
+                            <th className="border border-gray-400 bg-gray-200 w-12 sticky left-0 z-10"></th>
+                            {colLabels.map(col => (
+                                <th key={col} className="border border-gray-400 bg-gray-200 px-4 py-1 min-w-[100px]">{col}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {Array.from({ length: rows }).map((_, rowIdx) => (
+                            <tr key={rowIdx}>
+                                <td className="border border-gray-400 bg-gray-200 text-center font-semibold sticky left-0 z-10">{rowIdx + 1}</td>
+                                {Array.from({ length: cols }).map((_, colIdx) => {
+                                    const cellId = getCellId(rowIdx, colIdx);
+                                    const isSelected = selectedCell === cellId;
+                                    return (
+                                        <td
+                                            key={cellId}
+                                            className={`border border-gray-400 px-2 py-1 cursor-pointer hover:bg-blue-50 ${isSelected ? 'bg-blue-100 ring-2 ring-blue-500' : ''}`}
+                                            onClick={() => handleCellClick(rowIdx, colIdx)}
+                                        >
+                                            {getCellDisplay(rowIdx, colIdx)}
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+// Presentation App
+interface Slide {
+    id: string;
+    title: string;
+    content: string;
+}
+
+export const PresentationApp = () => {
+    const [slides, setSlides] = useState<Slide[]>([{ id: '1', title: 'Slide 1', content: 'Click to edit content' }]);
+    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+    const [isPresenting, setIsPresenting] = useState(false);
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('maxfra-presentation');
+            if (saved) setSlides(JSON.parse(saved));
+        } catch (error) {
+            console.error("Failed to load presentation", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('maxfra-presentation', JSON.stringify(slides));
+        } catch (error) {
+            console.error("Failed to save presentation", error);
+        }
+    }, [slides]);
+
+    const addSlide = () => {
+        const newSlide: Slide = {
+            id: Date.now().toString(),
+            title: `Slide ${slides.length + 1}`,
+            content: 'Click to edit content'
+        };
+        setSlides([...slides, newSlide]);
+        setCurrentSlideIndex(slides.length);
+    };
+
+    const deleteSlide = (index: number) => {
+        if (slides.length > 1) {
+            const newSlides = slides.filter((_, i) => i !== index);
+            setSlides(newSlides);
+            if (currentSlideIndex >= newSlides.length) {
+                setCurrentSlideIndex(newSlides.length - 1);
+            }
+        }
+    };
+
+    const updateSlide = (field: 'title' | 'content', value: string) => {
+        const newSlides = [...slides];
+        newSlides[currentSlideIndex][field] = value;
+        setSlides(newSlides);
+    };
+
+    const currentSlide = slides[currentSlideIndex];
+
+    if (isPresenting) {
+        return (
+            <div className="w-full h-full flex flex-col bg-gray-900 text-white">
+                <div className="flex-grow flex items-center justify-center p-8">
+                    <div className="text-center max-w-4xl">
+                        <h1 className="text-5xl font-bold mb-8">{currentSlide.title}</h1>
+                        <p className="text-2xl whitespace-pre-wrap">{currentSlide.content}</p>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-800">
+                    <button
+                        onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
+                        disabled={currentSlideIndex === 0}
+                        className="px-6 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        Previous
+                    </button>
+                    <span className="text-lg">{currentSlideIndex + 1} / {slides.length}</span>
+                    <button
+                        onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
+                        disabled={currentSlideIndex === slides.length - 1}
+                        className="px-6 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+                    <button onClick={() => setIsPresenting(false)} className="px-6 py-2 bg-red-600 rounded hover:bg-red-700">
+                        Exit Presentation
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full h-full flex bg-white text-black">
+            <div className="w-48 bg-gray-100 border-r overflow-y-auto p-2">
+                <button onClick={addSlide} className="w-full px-3 py-2 mb-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
+                    + New Slide
+                </button>
+                {slides.map((slide, index) => (
+                    <div
+                        key={slide.id}
+                        className={`p-2 mb-2 rounded cursor-pointer border ${index === currentSlideIndex ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                        onClick={() => setCurrentSlideIndex(index)}
+                    >
+                        <div className="text-xs font-semibold mb-1">{index + 1}. {slide.title}</div>
+                        <div className="text-xs text-gray-600 truncate">{slide.content}</div>
+                        {slides.length > 1 && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); deleteSlide(index); }}
+                                className="mt-1 text-xs text-red-600 hover:text-red-800"
+                            >
+                                Delete
+                            </button>
+                        )}
+                    </div>
+                ))}
+            </div>
+            <div className="flex-grow flex flex-col p-4">
+                <div className="mb-4">
+                    <button onClick={() => setIsPresenting(true)} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold">
+                        ▶ Start Presentation
+                    </button>
+                </div>
+                <div className="mb-4">
+                    <input
+                        type="text"
+                        value={currentSlide.title}
+                        onChange={e => updateSlide('title', e.target.value)}
+                        className="w-full text-3xl font-bold border-b-2 border-gray-300 focus:outline-none focus:border-blue-500 p-2"
+                        placeholder="Slide Title"
+                    />
+                </div>
+                <textarea
+                    value={currentSlide.content}
+                    onChange={e => updateSlide('content', e.target.value)}
+                    className="flex-grow p-4 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500 resize-none text-lg"
+                    placeholder="Slide content..."
+                />
+            </div>
+        </div>
+    );
+};
+
+// Email Client App
+interface Email {
+    id: string;
+    from: string;
+    subject: string;
+    body: string;
+    date: Date;
+    isRead: boolean;
+}
+
+export const EmailClientApp = () => {
+    const [emails, setEmails] = useState<Email[]>([
+        {
+            id: '1',
+            from: 'admin@maxfra.academy',
+            subject: 'Welcome to Maxfra OS',
+            body: 'Thank you for using Maxfra Academy OS. This is your email client.',
+            date: new Date(),
+            isRead: false
+        }
+    ]);
+    const [view, setView] = useState<'inbox' | 'compose' | 'read'>('inbox');
+    const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+    const [composeForm, setComposeForm] = useState({ to: '', subject: '', body: '' });
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('maxfra-emails');
+            if (saved) {
+                const parsed = JSON.parse(saved).map((email: any) => ({
+                    ...email,
+                    date: new Date(email.date)
+                }));
+                setEmails(parsed);
+            }
+        } catch (error) {
+            console.error("Failed to load emails", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('maxfra-emails', JSON.stringify(emails));
+        } catch (error) {
+            console.error("Failed to save emails", error);
+        }
+    }, [emails]);
+
+    const handleEmailClick = (email: Email) => {
+        setSelectedEmail(email);
+        setView('read');
+        const newEmails = emails.map(e => e.id === email.id ? { ...e, isRead: true } : e);
+        setEmails(newEmails);
+    };
+
+    const handleSendEmail = () => {
+        if (!composeForm.to || !composeForm.subject) {
+            alert('Please fill in recipient and subject');
+            return;
+        }
+        const newEmail: Email = {
+            id: Date.now().toString(),
+            from: 'me@maxfra.academy',
+            subject: composeForm.subject,
+            body: composeForm.body,
+            date: new Date(),
+            isRead: true
+        };
+        setEmails([newEmail, ...emails]);
+        setComposeForm({ to: '', subject: '', body: '' });
+        setView('inbox');
+    };
+
+    const handleDeleteEmail = (id: string) => {
+        setEmails(emails.filter(e => e.id !== id));
+        setView('inbox');
+        setSelectedEmail(null);
+    };
+
+    return (
+        <div className="w-full h-full flex bg-white text-black">
+            <div className="w-48 bg-gray-100 border-r p-2">
+                <button
+                    onClick={() => setView('inbox')}
+                    className={`w-full text-left px-4 py-2 mb-2 rounded ${view === 'inbox' || view === 'read' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-200'}`}
+                >
+                    📥 Inbox ({emails.filter(e => !e.isRead).length})
+                </button>
+                <button
+                    onClick={() => { setView('compose'); setComposeForm({ to: '', subject: '', body: '' }); }}
+                    className={`w-full text-left px-4 py-2 rounded ${view === 'compose' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-200'}`}
+                >
+                    ✏️ Compose
+                </button>
+            </div>
+            <div className="flex-grow flex flex-col">
+                {view === 'inbox' && (
+                    <div className="flex-grow overflow-y-auto">
+                        <div className="p-4 bg-gray-50 border-b font-semibold">Inbox</div>
+                        {emails.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500">No emails</div>
+                        ) : (
+                            emails.map(email => (
+                                <div
+                                    key={email.id}
+                                    onClick={() => handleEmailClick(email)}
+                                    className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${!email.isRead ? 'bg-blue-50 font-semibold' : ''}`}
+                                >
+                                    <div className="flex justify-between items-start mb-1">
+                                        <span className="font-medium">{email.from}</span>
+                                        <span className="text-xs text-gray-500">{email.date.toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="text-sm font-semibold mb-1">{email.subject}</div>
+                                    <div className="text-xs text-gray-600 truncate">{email.body}</div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
+                {view === 'compose' && (
+                    <div className="flex-grow flex flex-col p-4">
+                        <h2 className="text-xl font-bold mb-4">New Email</h2>
+                        <div className="mb-3">
+                            <label className="block text-sm font-medium mb-1">To:</label>
+                            <input
+                                type="email"
+                                value={composeForm.to}
+                                onChange={e => setComposeForm({ ...composeForm, to: e.target.value })}
+                                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="recipient@example.com"
+                            />
+                        </div>
+                        <div className="mb-3">
+                            <label className="block text-sm font-medium mb-1">Subject:</label>
+                            <input
+                                type="text"
+                                value={composeForm.subject}
+                                onChange={e => setComposeForm({ ...composeForm, subject: e.target.value })}
+                                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Email subject"
+                            />
+                        </div>
+                        <div className="flex-grow flex flex-col mb-3">
+                            <label className="block text-sm font-medium mb-1">Message:</label>
+                            <textarea
+                                value={composeForm.body}
+                                onChange={e => setComposeForm({ ...composeForm, body: e.target.value })}
+                                className="flex-grow px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                placeholder="Type your message..."
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={handleSendEmail} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                Send
+                            </button>
+                            <button onClick={() => setView('inbox')} className="px-6 py-2 bg-gray-300 rounded hover:bg-gray-400">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
+                {view === 'read' && selectedEmail && (
+                    <div className="flex-grow flex flex-col p-4">
+                        <div className="mb-4 pb-4 border-b">
+                            <div className="flex justify-between items-start mb-2">
+                                <h2 className="text-2xl font-bold">{selectedEmail.subject}</h2>
+                                <button onClick={() => handleDeleteEmail(selectedEmail.id)} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+                                    Delete
+                                </button>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                                <span className="font-medium">From:</span> {selectedEmail.from}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                                <span className="font-medium">Date:</span> {selectedEmail.date.toLocaleString()}
+                            </div>
+                        </div>
+                        <div className="flex-grow whitespace-pre-wrap">{selectedEmail.body}</div>
+                        <div className="mt-4">
+                            <button onClick={() => setView('inbox')} className="px-6 py-2 bg-gray-300 rounded hover:bg-gray-400">
+                                Back to Inbox
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
